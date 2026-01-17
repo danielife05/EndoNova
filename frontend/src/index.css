@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   ESTILO TRON/CYBERPUNK - SISTEMA ODONTOLÓGICO
+   ============================================ */
+
+:root {
+  --neon-cyan: #00d4ff;
+  --neon-blue: #0066ff;
+  --neon-green: #00ff88;
+  --neon-magenta: #ff00ff;
+  --neon-red: #ff3366;
+  --dark-bg: #0a0a0f;
+  --dark-surface: #12121a;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #00d4ff44 #12121a;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #12121a;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00d4ff44, #0066ff44);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #00d4ff66, #0066ff66);
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Consolas', monospace;
+  background-color: var(--dark-bg);
+  color: #e0f7ff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Efecto de glow para elementos */
+.neon-glow {
+  box-shadow: 
+    0 0 5px var(--neon-cyan),
+    0 0 10px var(--neon-cyan),
+    0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.neon-glow-green {
+  box-shadow: 
+    0 0 5px var(--neon-green),
+    0 0 10px var(--neon-green),
+    0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.neon-glow-magenta {
+  box-shadow: 
+    0 0 5px var(--neon-magenta),
+    0 0 10px var(--neon-magenta),
+    0 0 20px rgba(255, 0, 255, 0.3);
+}
+
+/* Animación de pulso neón */
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--neon-cyan), 0 0 10px var(--neon-cyan);
+  }
+  50% {
+    box-shadow: 0 0 15px var(--neon-cyan), 0 0 30px var(--neon-cyan);
+  }
+}
+
+.animate-neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+/* Estilos para inputs */
+input, select, textarea {
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+/* Efecto scanline sutil (opcional, descomentar si se desea) */
+/*
+.scanline::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+*/
+
+/* Selección de texto */
+::selection {
+  background: var(--neon-cyan);
+  color: #000;
+}
+
+/* Placeholder styling */
+::placeholder {
+  color: #2a4a5a;
+  opacity: 1;
+}
+
+/* Grid de fondo (opcional) */
+.grid-background {
+  background-image: 
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}

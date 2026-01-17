@@ -1,0 +1,71 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: user_admin
+      POSTGRES_PASSWORD: admin_password
+      POSTGRES_DB: dental_db
+    ports:
+      - "5444:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_admin -d dental_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Repite este bloque de 'depends_on' y 'restart' para TODOS tus servicios (auth, patient, clinical, odontogram)
+  auth-service:
+    build: ./auth-service
+    restart: on-failure # Si falla al conectar, Docker lo reiniciará automáticamente
+    ports:
+      - "8004:8000"
+    environment:
+      - DATABASE_URL=postgresql://user_admin:admin_password@db:5432/dental_db
+    depends_on:
+      db:
+        condition: service_healthy # Solo arranca cuando el healthcheck de 'db' pase
+
+  patient-service:
+    build: ./patient-service
+    restart: on-failure
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql://user_admin:admin_password@db:5432/dental_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  clinical-service:
+    build: ./clinical-service
+    restart: on-failure
+    ports:
+      - "8002:8000"
+    environment:
+      - DATABASE_URL=postgresql://user_admin:admin_password@db:5432/dental_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  odontogram-service:
+    build: ./odontogram-service
+    restart: on-failure
+    ports:
+      - "8003:8000"
+    environment:
+      - DATABASE_URL=postgresql://user_admin:admin_password@db:5432/dental_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  gateway:
+    build: ./gateway
+    restart: on-failure
+    ports:
+      - "8000:8000"
+    depends_on:
+      - auth-service
+      - patient-service
+      - clinical-service
+      - odontogram-service
