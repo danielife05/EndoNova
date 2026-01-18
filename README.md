@@ -1,129 +1,130 @@
-# 🦷 EndoNova - Sistema de Gestión Odontológica
+# EndoNova - Sistema de Gestión Odontológica (Endodoncia)
 
-Sistema integral de gestión para clínicas odontológicas especializado en endodoncia. Desarrollado con arquitectura de microservicios.
+EndoNova es un sistema para gestión de pacientes, fichas endodónticas, odontograma y pagos. Está construido con arquitectura de microservicios (FastAPI) y un frontend web (React).
 
-## 📋 Características
+## Arquitectura
 
-- **Gestión de Pacientes**: CRUD completo con información personal y antecedentes médicos
-- **Fichas Endodónticas**: Registro detallado de tratamientos endodónticos con estados (ABIERTA/CERRADA)
-- **Odontograma**: Visualización gráfica del estado dental del paciente
-- **Presupuestos y Pagos**: Control financiero de tratamientos
-- **Autenticación**: Sistema seguro de login con JWT
+* Frontend (React + Vite) consume un API Gateway.
+* El Gateway enruta a microservicios (auth, patient, clinical, odontogram).
+* PostgreSQL centraliza persistencia.
 
-## 🏗️ Arquitectura
+Servicios:
 
-El sistema utiliza una arquitectura de microservicios:
+* auth-service: registro, login, JWT
+* patient-service: pacientes
+* clinical-service: fichas endodónticas, presupuestos, pagos
+* odontogram-service: odontograma y estados dentales
+* gateway: punto único de entrada para el frontend
+* db: PostgreSQL 15
 
-```
-┌─────────────────┐
-│    Frontend     │  React + TypeScript + Tailwind CSS
-│   (Vite)        │
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│     Gateway     │  FastAPI - API Gateway
-└────────┬────────┘
-         │
-    ┌────┼────┬────────────┐
-    │    │    │            │
-┌───▼──┐ │ ┌──▼───┐ ┌─────▼─────┐ ┌──────────┐
-│Auth  │ │ │Patient│ │ Clinical  │ │Odontogram│
-│Svc   │ │ │ Svc   │ │   Svc     │ │   Svc    │
-└──────┘ │ └───────┘ └───────────┘ └──────────┘
-         │
-    ┌────▼────┐
-    │PostgreSQL│
-    └─────────┘
-```
+Puertos (host -> contenedor):
 
-## 🛠️ Tecnologías
+* Frontend: 5173
+* Gateway: 8000
+* Auth: 8004
+* Patient: 8001
+* Clinical: 8002
+* Odontogram: 8003
+* PostgreSQL: 5444 -> 5432
 
-### Backend
-- **FastAPI** - Framework web de alto rendimiento
-- **SQLAlchemy** - ORM para Python
-- **PostgreSQL** - Base de datos relacional
-- **Docker** - Contenedorización
+## Requisitos
 
-### Frontend
-- **React 18** - Biblioteca de UI
-- **TypeScript** - Tipado estático
-- **Tailwind CSS** - Framework de estilos
-- **Vite** - Build tool
+* Docker Desktop (con Docker Compose)
+* Node.js 18+ (recomendado) para desarrollo del frontend
+* Git
 
-## 🚀 Instalación
+## Quick start (Docker)
 
-### Prerrequisitos
-- Docker y Docker Compose
-- Node.js 18+ (para desarrollo frontend)
-- Git
+En la raíz del repo:
 
-### Pasos
-
-1. **Clonar el repositorio**
 ```bash
-git clone https://github.com/TU_USUARIO/EndoNova.git
-cd EndoNova
+docker compose up -d --build
+docker compose ps
 ```
 
-2. **Iniciar servicios con Docker**
+Verifica salud de la base:
+
 ```bash
-docker-compose up -d --build
+docker compose ps
 ```
 
-3. **Instalar dependencias del frontend**
+El servicio `db` debe aparecer como `(healthy)`.
+
+## Frontend (modo desarrollo)
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-4. **Acceder a la aplicación**
-- Frontend: http://localhost:5173
-- Gateway API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+Abrir:
 
-## 📁 Estructura del Proyecto
+* Frontend: [http://localhost:5173](http://localhost:5173/)
+
+## Documentación API (Swagger)
+
+* Auth: [http://localhost:8004/docs](http://localhost:8004/docs)
+* Gateway: [http://localhost:8000/docs](http://localhost:8000/docs)
+* Patient: [http://localhost:8001/docs](http://localhost:8001/docs)
+* Clinical: [http://localhost:8002/docs](http://localhost:8002/docs)
+* Odontogram: [http://localhost:8003/docs](http://localhost:8003/docs)
+
+## Acceso a la base de datos
+
+### DBeaver (recomendado)
+
+Crear conexión PostgreSQL con:
+
+* Host: localhost
+* Port: 5444
+* Database: dental_db
+* Username: user_admin
+* Password: admin_password
+
+Tablas esperadas (pueden estar vacías al inicio):
+
+* usuarios: se llena al registrar usuarios
+* pacientes: se llena al crear pacientes
+* fichas_endodonticas: se llena al crear fichas
+* odontogramas / odontograma_dientes: se llenan al guardar odontograma
+* tablas de pagos/presupuestos: se llenan al registrar pagos y actividades
+
+### psql dentro del contenedor
+
+```bash
+docker compose exec db psql -U user_admin -d dental_db
+```
+
+Ejemplos:
+
+```sql
+SELECT * FROM usuarios ORDER BY id_usuario DESC;
+SELECT * FROM pacientes ORDER BY id_paciente DESC;
+SELECT * FROM fichas_endodonticas ORDER BY id_ficha DESC;
+```
+
+### Puerto ocupado
+
+Edita el puerto en `docker-compose.yml` o cierra el proceso que lo usa.
+
+### Reset completo de la base (borra datos)
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+## Estructura del repositorio
 
 ```
 EndoNova/
-├── auth-service/          # Servicio de autenticación
-├── patient-service/       # Servicio de pacientes
-├── clinical-service/      # Servicio de fichas y pagos
-├── odontogram-service/    # Servicio de odontograma
-├── gateway/               # API Gateway
-├── frontend/              # Aplicación React
-└── docker-compose.yml     # Orquestación de servicios
+  auth-service/
+  patient-service/
+  clinical-service/
+  odontogram-service/
+  gateway/
+  frontend/
+  docker-compose.yml
+  README.md
 ```
-
-## 🔧 Variables de Entorno
-
-Crear un archivo `.env` en la raíz:
-
-```env
-POSTGRES_USER=user_admin
-POSTGRES_PASSWORD=admin_password
-POSTGRES_DB=dental_db
-JWT_SECRET=tu_secreto_jwt
-```
-
-## 📝 API Endpoints
-
-| Servicio | Puerto | Descripción |
-|----------|--------|-------------|
-| Gateway | 8000 | API Gateway principal |
-| Auth | 8004 | Autenticación y JWT |
-| Patients | 8001 | Gestión de pacientes |
-| Clinical | 8002 | Fichas y pagos |
-| Odontogram | 8003 | Odontograma |
-
-## 👥 Autores
-
-- Daniel - Desarrollo Full Stack
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT.
-
----
-
-⭐ Si te gusta este proyecto, ¡dale una estrella en GitHub!
