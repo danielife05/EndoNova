@@ -1,3 +1,4 @@
+from sqlalchemy.exc import IntegrityError
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
@@ -8,13 +9,20 @@ models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="Servicio de Pacientes")
 
-@app.post("/patients/", response_model=schemas.PatientResponse)
+@app.post("/patients/", response_model=schemas.PatientResponse, status_code=status.HTTP_201_CREATED)
 def create_patient(patient: schemas.PatientCreate, db: Session = Depends(database.get_db)):
     db_patient = models.Patient(**patient.model_dump())
     db.add(db_patient)
-    db.commit()
-    db.refresh(db_patient)
-    return db_patient
+    try:
+        db.commit()
+        db.refresh(db_patient)
+        return db_patient
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Ya existe un paciente con esa cédula"
+        )
 
 @app.get("/patients/", response_model=List[schemas.PatientResponse])
 def read_patients(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
