@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import type { EstadoDiente, OdontogramaResponse } from '../types';
 
@@ -7,39 +8,51 @@ interface OdontogramProps {
   onClose?: () => void;
 }
 
-// Estados disponibles
 const ESTADOS: EstadoDiente[] = ['SANO', 'CARIES', 'RESTAURACION', 'ENDODONCIA', 'AUSENTE', 'OTRO'];
 
-// Colores profesionales por estado
-const ESTADO_CONFIG: Record<EstadoDiente, { color: string; bg: string; label: string }> = {
-  'SANO': { color: '#16a34a', bg: '#dcfce7', label: 'Sano' },
-  'CARIES': { color: '#dc2626', bg: '#fecaca', label: 'Caries' },
-  'RESTAURACION': { color: '#2563eb', bg: '#dbeafe', label: 'Restauración' },
-  'ENDODONCIA': { color: '#9333ea', bg: '#f3e8ff', label: 'Endodoncia' },
-  'AUSENTE': { color: '#6b7280', bg: '#e5e7eb', label: 'Ausente' },
-  'OTRO': { color: '#f59e0b', bg: '#fef3c7', label: 'Otro' }
+const ESTADO_CONFIG: Record<EstadoDiente, { color: string; bg: string; label: string; gradient: string }> = {
+  'SANO': { color: '#10b981', bg: '#d1fae5', label: 'Sano', gradient: 'from-emerald-400 to-emerald-600' },
+  'CARIES': { color: '#ef4444', bg: '#fee2e2', label: 'Caries', gradient: 'from-red-400 to-red-600' },
+  'RESTAURACION': { color: '#3b82f6', bg: '#dbeafe', label: 'Restauración', gradient: 'from-blue-400 to-blue-600' },
+  'ENDODONCIA': { color: '#8b5cf6', bg: '#ede9fe', label: 'Endodoncia', gradient: 'from-violet-400 to-violet-600' },
+  'AUSENTE': { color: '#6b7280', bg: '#e5e7eb', label: 'Ausente', gradient: 'from-gray-400 to-gray-600' },
+  'OTRO': { color: '#f59e0b', bg: '#fef3c7', label: 'Otro', gradient: 'from-amber-400 to-amber-600' }
 };
 
-// Dientes permanentes
 const DIENTES_SUPERIORES_DER = [18, 17, 16, 15, 14, 13, 12, 11];
 const DIENTES_SUPERIORES_IZQ = [21, 22, 23, 24, 25, 26, 27, 28];
 const DIENTES_INFERIORES_DER = [48, 47, 46, 45, 44, 43, 42, 41];
 const DIENTES_INFERIORES_IZQ = [31, 32, 33, 34, 35, 36, 37, 38];
-
-// Dientes deciduos (temporales)
 const DECIDUOS_SUPERIORES_DER = [55, 54, 53, 52, 51];
 const DECIDUOS_SUPERIORES_IZQ = [61, 62, 63, 64, 65];
 const DECIDUOS_INFERIORES_DER = [85, 84, 83, 82, 81];
 const DECIDUOS_INFERIORES_IZQ = [71, 72, 73, 74, 75];
 
-// Componente de diente individual
+// Fondo animado
+const AnimatedBackground: React.FC = () => (
+  <div className="fixed inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 bg-gradient-to-br from-cyan-50 via-blue-50 to-teal-50" />
+    <div className="absolute inset-0 pattern-dots opacity-30" />
+    <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-400/10 rounded-full blur-3xl animate-drift" />
+    <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-float-slow" />
+    
+    <svg className="absolute top-20 right-[10%] w-10 h-10 text-cyan-200/50 animate-float-slow" viewBox="0 0 100 120" fill="currentColor">
+      <path d="M50 8 C68 8, 82 18, 86 35 C90 52, 82 62, 78 72 L74 105 C72 112, 68 112, 66 105 L62 82 C60 78, 54 78, 52 82 L50 82 C48 78, 42 78, 40 82 L36 105 C34 112, 30 112, 28 105 L24 72 C20 62, 12 52, 16 35 C20 18, 34 8, 50 8Z"/>
+    </svg>
+    <svg className="absolute bottom-32 left-[5%] w-8 h-8 text-blue-200/40 animate-float-medium" viewBox="0 0 100 120" fill="currentColor">
+      <path d="M50 8 C68 8, 82 18, 86 35 C90 52, 82 62, 78 72 L74 105 C72 112, 68 112, 66 105 L62 82 C60 78, 54 78, 52 82 L50 82 C48 78, 42 78, 40 82 L36 105 C34 112, 30 112, 28 105 L24 72 C20 62, 12 52, 16 35 C20 18, 34 8, 50 8Z"/>
+    </svg>
+  </div>
+);
+
+// Botón de diente
 const ToothButton: React.FC<{
   numero: number;
   estado: EstadoDiente;
   onClick: (numero: number) => void;
   isDeciduo?: boolean;
-}> = ({ numero, estado, onClick, isDeciduo }) => {
-  // Usar SANO como valor por defecto si el estado es undefined o inválido
+  index: number;
+}> = ({ numero, estado, onClick, isDeciduo, index }) => {
   const estadoValido = estado && ESTADO_CONFIG[estado] ? estado : 'SANO';
   const config = ESTADO_CONFIG[estadoValido];
   
@@ -47,20 +60,30 @@ const ToothButton: React.FC<{
     <button
       onClick={() => onClick(numero)}
       className={`
-        flex flex-col items-center justify-center rounded-full transition-all duration-200
-        hover:scale-110 hover:shadow-lg border-2
-        ${isDeciduo ? 'w-10 h-10' : 'w-12 h-12'}
+        flex flex-col items-center justify-center rounded-2xl transition-all duration-300
+        hover:scale-110 hover:shadow-xl border-2 relative group animate-fade-in-up
+        ${isDeciduo ? 'w-11 h-11' : 'w-14 h-14'}
       `}
       style={{
         borderColor: config.color,
         backgroundColor: config.bg,
+        animationDelay: `${index * 30}ms`
       }}
       title={`Pieza ${numero}: ${config.label}`}
     >
-      <span className="text-xs font-bold text-blue-900">{numero}</span>
-      <span className="text-[9px]" style={{ color: config.color }}>
+      {/* Efecto de brillo en hover */}
+      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${config.gradient} opacity-0 group-hover:opacity-20 transition-opacity`} />
+      
+      <span className="text-xs font-bold text-slate-700 relative z-10">{numero}</span>
+      <span className="text-[9px] font-medium relative z-10" style={{ color: config.color }}>
         {config.label.slice(0, 3)}
       </span>
+      
+      {/* Indicador visual del estado */}
+      <div 
+        className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white shadow-sm"
+        style={{ backgroundColor: config.color }}
+      />
     </button>
   );
 };
@@ -72,17 +95,19 @@ const DentalRow: React.FC<{
   onToothClick: (numero: number) => void;
   label: string;
   isDeciduo?: boolean;
-}> = ({ dientes, estados, onToothClick, label, isDeciduo }) => (
+  startIndex: number;
+}> = ({ dientes, estados, onToothClick, label, isDeciduo, startIndex }) => (
   <div className="flex flex-col items-center">
-    <span className="text-xs text-slate-500 mb-2">{label}</span>
-    <div className="flex gap-1">
-      {dientes.map(num => (
+    <span className="text-xs font-semibold text-slate-500 mb-3 px-3 py-1 bg-white/50 rounded-full">{label}</span>
+    <div className="flex gap-1.5">
+      {dientes.map((num, idx) => (
         <ToothButton
           key={num}
           numero={num}
           estado={estados[num] || 'SANO'}
           onClick={onToothClick}
           isDeciduo={isDeciduo}
+          index={startIndex + idx}
         />
       ))}
     </div>
@@ -90,6 +115,7 @@ const DentalRow: React.FC<{
 );
 
 const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [estados, setEstados] = useState<Record<number, EstadoDiente>>({});
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; pieza: number } | null>(null);
@@ -97,27 +123,22 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
   const [showHistorial, setShowHistorial] = useState(false);
   const [odontogramaActual, setOdontogramaActual] = useState<number | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const fetchHistorial = useCallback(async () => {
     try {
       const response = await api.get<OdontogramaResponse[]>(`/odontogram/odontogramas/paciente/${idPaciente}`);
       setHistorial(response.data || []);
-      
-      // Cargar el último odontograma
       if (response.data && response.data.length > 0) {
-        const ultimo = response.data[0];
-        cargarOdontograma(ultimo);
+        cargarOdontograma(response.data[0]);
       }
     } catch (error) {
       console.error('Error cargando historial:', error);
     }
   }, [idPaciente]);
 
-  useEffect(() => {
-    fetchHistorial();
-  }, [fetchHistorial]);
+  useEffect(() => { fetchHistorial(); }, [fetchHistorial]);
 
-  // Cerrar menú contextual al hacer click fuera
   useEffect(() => {
     const handleClickOutside = () => setContextMenu(null);
     if (contextMenu) {
@@ -128,26 +149,18 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
 
   const cargarOdontograma = (odontograma: OdontogramaResponse) => {
     const nuevosEstados: Record<number, EstadoDiente> = {};
-    odontograma.dientes.forEach(d => {
-      nuevosEstados[d.pieza_dental] = d.estado;
-    });
+    odontograma.dientes.forEach(d => { nuevosEstados[d.pieza_dental] = d.estado; });
     setEstados(nuevosEstados);
     setOdontogramaActual(odontograma.id_odontograma);
     setShowHistorial(false);
     setHasChanges(false);
   };
 
-  const handleToothClick = (numero: number, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      setContextMenu({ x: e.clientX, y: e.clientY, pieza: numero });
-    } else {
-      // Click simple - ciclar estados
-      const currentIndex = ESTADOS.indexOf(estados[numero] || 'SANO');
-      const nextIndex = (currentIndex + 1) % ESTADOS.length;
-      setEstados(prev => ({ ...prev, [numero]: ESTADOS[nextIndex] }));
-      setHasChanges(true);
-    }
+  const handleToothClick = (numero: number) => {
+    const currentIndex = ESTADOS.indexOf(estados[numero] || 'SANO');
+    const nextIndex = (currentIndex + 1) % ESTADOS.length;
+    setEstados(prev => ({ ...prev, [numero]: ESTADOS[nextIndex] }));
+    setHasChanges(true);
   };
 
   const handleEstadoSelect = (estado: EstadoDiente) => {
@@ -159,21 +172,13 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
   };
 
   const handleGuardar = async () => {
-    setLoading(true);
+    setSaving(true);
     try {
       const dientes = Object.entries(estados)
         .filter(([, estado]) => estado !== 'SANO')
-        .map(([numero, estado]) => ({
-          pieza_dental: parseInt(numero),
-          estado,
-          observacion: ''
-        }));
+        .map(([numero, estado]) => ({ pieza_dental: parseInt(numero), estado, observacion: '' }));
 
-      await api.post('/odontogram/odontogramas/', {
-        id_paciente: idPaciente,
-        dientes
-      });
-
+      await api.post('/odontogram/odontogramas/', { id_paciente: idPaciente, dientes });
       setHasChanges(false);
       fetchHistorial();
       alert('Odontograma guardado exitosamente');
@@ -181,7 +186,7 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
       console.error('Error guardando odontograma:', error);
       alert('Error al guardar el odontograma');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -192,217 +197,201 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
     setShowHistorial(false);
   };
 
+  const handleClose = () => {
+    if (onClose) onClose();
+    else navigate('/pacientes');
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen relative">
+      <AnimatedBackground />
+      
+      <div className="relative z-10 max-w-6xl mx-auto p-6">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">Odontograma</h1>
-              <p className="text-slate-500 text-sm mt-1">
-                Paciente #{idPaciente}
-                {odontogramaActual && <span className="ml-2 text-blue-600">• Registro #{odontogramaActual}</span>}
-              </p>
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 mb-6 animate-fade-in-down">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                <svg className="w-8 h-9 text-white" viewBox="0 0 100 120" fill="currentColor">
+                  <path d="M50 8 C68 8, 82 18, 86 35 C90 52, 82 62, 78 72 L74 105 C72 112, 68 112, 66 105 L62 82 C60 78, 54 78, 52 82 L50 82 C48 78, 42 78, 40 82 L36 105 C34 112, 30 112, 28 105 L24 72 C20 62, 12 52, 16 35 C20 18, 34 8, 50 8Z"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-800">Odontograma</h1>
+                <p className="text-slate-500">
+                  Paciente #{idPaciente}
+                  {odontogramaActual && <span className="ml-2 text-cyan-600 font-medium">• Registro #{odontogramaActual}</span>}
+                </p>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleNuevo}
-                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 
-                  hover:bg-slate-100 transition-colors text-sm font-medium"
-              >
+            
+            <div className="flex flex-wrap gap-2">
+              <button onClick={handleNuevo}
+                className="px-4 py-2.5 border-2 border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 hover:border-slate-300 transition-all">
                 Nuevo
               </button>
-              <button
-                onClick={() => setShowHistorial(!showHistorial)}
-                className="px-4 py-2 bg-slate-100 rounded-lg text-slate-700 
-                  hover:bg-slate-200 transition-colors text-sm font-medium"
-              >
-                {showHistorial ? 'Ver Actual' : `Historial (${historial.length})`}
+              <button onClick={() => setShowHistorial(!showHistorial)}
+                className="px-4 py-2.5 border-2 border-cyan-200 rounded-xl text-cyan-600 font-medium hover:bg-cyan-50 transition-all flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Historial
               </button>
-              <button
-                onClick={handleGuardar}
-                disabled={loading || !hasChanges}
-                className="px-6 py-2 bg-blue-600 rounded-lg text-white font-medium
-                  hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Guardando...' : 'Guardar'}
+              <button onClick={handleGuardar} disabled={!hasChanges || saving}
+                className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2">
+                {saving ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+                {saving ? 'Guardando...' : 'Guardar'}
               </button>
-              {onClose && (
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 border border-red-300 rounded-lg text-red-600 
-                    hover:bg-red-50 transition-colors text-sm font-medium"
-                >
-                  Cerrar
-                </button>
-              )}
+              <button onClick={handleClose}
+                className="px-4 py-2.5 border-2 border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all">
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
 
         {/* Leyenda */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-          <div className="flex flex-wrap gap-4 justify-center">
+        <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 p-4 mb-6 animate-fade-in-up">
+          <div className="flex flex-wrap gap-3 justify-center">
             {ESTADOS.map(estado => (
-              <div key={estado} className="flex items-center gap-2">
+              <div key={estado} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg">
                 <div 
-                  className="w-4 h-4 rounded border-2"
-                  style={{ 
-                    borderColor: ESTADO_CONFIG[estado].color,
-                    backgroundColor: ESTADO_CONFIG[estado].bg
-                  }}
+                  className="w-4 h-4 rounded-lg border-2 shadow-sm"
+                  style={{ borderColor: ESTADO_CONFIG[estado].color, backgroundColor: ESTADO_CONFIG[estado].bg }}
                 />
-                <span className="text-sm text-slate-600">{ESTADO_CONFIG[estado].label}</span>
+                <span className="text-sm font-medium text-slate-600">{ESTADO_CONFIG[estado].label}</span>
               </div>
             ))}
           </div>
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="text-blue-600 animate-pulse font-medium">Cargando...</div>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg animate-bounce-subtle">
+              <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+            <p className="text-slate-500 mt-4 font-medium">Cargando odontograma...</p>
           </div>
         ) : showHistorial ? (
-          /* Historial */
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Historial de Odontogramas</h2>
+          <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 animate-scale-in">
+            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Historial de Odontogramas
+            </h2>
             {historial.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">No hay registros anteriores</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-slate-500">No hay registros anteriores</p>
+              </div>
             ) : (
               <div className="grid gap-3">
                 {historial.map((h, idx) => (
                   <button
                     key={h.id_odontograma}
                     onClick={() => cargarOdontograma(h)}
-                    className="flex justify-between items-center p-4 border border-slate-200 
-                      rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-left"
+                    className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-2xl hover:border-cyan-200 hover:bg-cyan-50/50 transition-all text-left group"
                   >
-                    <div>
-                      <span className="font-medium text-slate-800">
-                        Registro #{idx + 1}
-                      </span>
-                      <span className="text-slate-500 text-sm ml-3">
-                        {new Date(h.fecha).toLocaleDateString('es-EC', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </span>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-xl flex items-center justify-center group-hover:from-cyan-200 group-hover:to-blue-200 transition-colors">
+                        <span className="text-cyan-600 font-bold">#{idx + 1}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-700 group-hover:text-cyan-600 transition-colors">
+                          {new Date(h.fecha).toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                        <p className="text-slate-500 text-sm">{h.dientes.filter(d => d.estado !== 'SANO').length} piezas con alteración</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-slate-500">
-                        {h.dientes.filter(d => d.estado !== 'SANO').length} piezas con alteración
-                      </span>
-                      <span className="text-blue-600">→</span>
-                    </div>
+                    <svg className="w-5 h-5 text-slate-400 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
                 ))}
               </div>
             )}
           </div>
         ) : (
-          /* Odontograma Visual */
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-8">
+          <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 space-y-8 animate-fade-in-up">
             {/* Dentición Permanente */}
             <div>
-              <h3 className="text-center text-slate-700 font-semibold mb-6">
+              <h3 className="text-center text-slate-700 font-bold mb-6 flex items-center justify-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600" viewBox="0 0 100 120" fill="currentColor">
+                    <path d="M50 8 C68 8, 82 18, 86 35 C90 52, 82 62, 78 72 L74 105 C72 112, 68 112, 66 105 L62 82 C60 78, 54 78, 52 82 L50 82 C48 78, 42 78, 40 82 L36 105 C34 112, 30 112, 28 105 L24 72 C20 62, 12 52, 16 35 C20 18, 34 8, 50 8Z"/>
+                  </svg>
+                </div>
                 Dentición Permanente
               </h3>
               
-              {/* Arcada Superior */}
-              <div className="flex justify-center gap-8 mb-4">
-                <DentalRow 
-                  dientes={DIENTES_SUPERIORES_DER}
-                  estados={estados}
-                  onToothClick={handleToothClick}
-                  label="Cuadrante 1"
-                />
-                <div className="w-px bg-slate-300" />
-                <DentalRow 
-                  dientes={DIENTES_SUPERIORES_IZQ}
-                  estados={estados}
-                  onToothClick={handleToothClick}
-                  label="Cuadrante 2"
-                />
+              <div className="flex justify-center gap-8 mb-4 flex-wrap">
+                <DentalRow dientes={DIENTES_SUPERIORES_DER} estados={estados} onToothClick={handleToothClick} label="Cuadrante 1" startIndex={0} />
+                <div className="w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent self-stretch hidden md:block" />
+                <DentalRow dientes={DIENTES_SUPERIORES_IZQ} estados={estados} onToothClick={handleToothClick} label="Cuadrante 2" startIndex={8} />
               </div>
 
-              {/* Línea divisoria */}
               <div className="flex items-center justify-center my-6">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
-                <span className="px-4 text-xs text-slate-400">Línea media</span>
+                <span className="px-4 py-1 text-xs font-medium text-slate-400 bg-white rounded-full border border-slate-200">Línea media</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
               </div>
 
-              {/* Arcada Inferior */}
-              <div className="flex justify-center gap-8">
-                <DentalRow 
-                  dientes={DIENTES_INFERIORES_DER}
-                  estados={estados}
-                  onToothClick={handleToothClick}
-                  label="Cuadrante 4"
-                />
-                <div className="w-px bg-slate-300" />
-                <DentalRow 
-                  dientes={DIENTES_INFERIORES_IZQ}
-                  estados={estados}
-                  onToothClick={handleToothClick}
-                  label="Cuadrante 3"
-                />
+              <div className="flex justify-center gap-8 flex-wrap">
+                <DentalRow dientes={DIENTES_INFERIORES_DER} estados={estados} onToothClick={handleToothClick} label="Cuadrante 4" startIndex={16} />
+                <div className="w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent self-stretch hidden md:block" />
+                <DentalRow dientes={DIENTES_INFERIORES_IZQ} estados={estados} onToothClick={handleToothClick} label="Cuadrante 3" startIndex={24} />
               </div>
             </div>
 
             {/* Dentición Decidua */}
-            <div className="pt-8 border-t border-slate-200">
-              <h3 className="text-center text-slate-700 font-semibold mb-6">
+            <div className="pt-8 border-t-2 border-dashed border-slate-200">
+              <h3 className="text-center text-slate-700 font-bold mb-6 flex items-center justify-center gap-2">
+                <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-pink-600" viewBox="0 0 100 120" fill="currentColor">
+                    <path d="M50 8 C68 8, 82 18, 86 35 C90 52, 82 62, 78 72 L74 105 C72 112, 68 112, 66 105 L62 82 C60 78, 54 78, 52 82 L50 82 C48 78, 42 78, 40 82 L36 105 C34 112, 30 112, 28 105 L24 72 C20 62, 12 52, 16 35 C20 18, 34 8, 50 8Z"/>
+                  </svg>
+                </div>
                 Dentición Decidua (Temporal)
               </h3>
               
-              {/* Arcada Superior Decidua */}
-              <div className="flex justify-center gap-8 mb-4">
-                <DentalRow 
-                  dientes={DECIDUOS_SUPERIORES_DER}
-                  estados={estados}
-                  onToothClick={handleToothClick}
-                  isDeciduo
-                  label="Cuadrante 5"
-                />
-                <div className="w-px bg-slate-300" />
-                <DentalRow 
-                  dientes={DECIDUOS_SUPERIORES_IZQ}
-                  estados={estados}
-                  onToothClick={handleToothClick}
-                  isDeciduo
-                  label="Cuadrante 6"
-                />
+              <div className="flex justify-center gap-8 mb-4 flex-wrap">
+                <DentalRow dientes={DECIDUOS_SUPERIORES_DER} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 5" startIndex={32} />
+                <div className="w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent self-stretch hidden md:block" />
+                <DentalRow dientes={DECIDUOS_SUPERIORES_IZQ} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 6" startIndex={37} />
               </div>
 
-              {/* Línea divisoria */}
               <div className="h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent my-4" />
 
-              {/* Arcada Inferior Decidua */}
-              <div className="flex justify-center gap-8">
-                <DentalRow 
-                  dientes={DECIDUOS_INFERIORES_DER}
-                  estados={estados}
-                  onToothClick={handleToothClick}
-                  isDeciduo
-                  label="Cuadrante 8"
-                />
-                <div className="w-px bg-slate-300" />
-                <DentalRow 
-                  dientes={DECIDUOS_INFERIORES_IZQ}
-                  estados={estados}
-                  onToothClick={handleToothClick}
-                  isDeciduo
-                  label="Cuadrante 7"
-                />
+              <div className="flex justify-center gap-8 flex-wrap">
+                <DentalRow dientes={DECIDUOS_INFERIORES_DER} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 8" startIndex={42} />
+                <div className="w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent self-stretch hidden md:block" />
+                <DentalRow dientes={DECIDUOS_INFERIORES_IZQ} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 7" startIndex={47} />
               </div>
             </div>
 
             {/* Instrucciones */}
-            <div className="text-center text-slate-500 text-sm mt-6 pt-4 border-t border-slate-100">
-              <p>Haz clic en un diente para cambiar su estado • Los cambios deben guardarse manualmente</p>
+            <div className="text-center text-slate-500 text-sm mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Haz clic en un diente para cambiar su estado • Los cambios deben guardarse manualmente
             </div>
           </div>
         )}
@@ -410,28 +399,24 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
         {/* Menú contextual */}
         {contextMenu && (
           <div
-            className="fixed bg-white rounded-lg border border-slate-200 shadow-xl p-2 z-50"
+            className="fixed bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 min-w-[180px] animate-scale-in"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={e => e.stopPropagation()}
           >
-            <p className="text-slate-700 text-sm font-medium mb-2 px-2 pb-2 border-b border-slate-100">
+            <p className="text-slate-700 text-sm font-semibold mb-2 px-3 pb-2 border-b border-slate-100">
               Pieza {contextMenu.pieza}
             </p>
             {ESTADOS.map(estado => (
               <button
                 key={estado}
                 onClick={() => handleEstadoSelect(estado)}
-                className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm 
-                  rounded hover:bg-slate-100 transition-colors"
+                className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm rounded-xl hover:bg-slate-100 transition-colors"
               >
                 <div 
-                  className="w-3 h-3 rounded border-2"
-                  style={{ 
-                    borderColor: ESTADO_CONFIG[estado].color,
-                    backgroundColor: ESTADO_CONFIG[estado].bg
-                  }}
+                  className="w-4 h-4 rounded-lg border-2"
+                  style={{ borderColor: ESTADO_CONFIG[estado].color, backgroundColor: ESTADO_CONFIG[estado].bg }}
                 />
-                <span style={{ color: ESTADO_CONFIG[estado].color }}>
+                <span style={{ color: ESTADO_CONFIG[estado].color }} className="font-medium">
                   {ESTADO_CONFIG[estado].label}
                 </span>
               </button>

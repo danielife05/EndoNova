@@ -10,12 +10,18 @@ const FichaPage: React.FC = () => {
 
   if (!idPaciente || isNaN(pacienteId)) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-xl shadow-sm">
-          <p className="text-red-600 mb-4">Error: ID de paciente no válido</p>
+      <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
+        <div className="border border-slate-800 bg-slate-900/50 p-8 max-w-md w-full text-center">
+          <div className="w-12 h-12 border border-red-500/30 bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-white mb-2">Error</p>
+          <p className="text-slate-500 text-sm mb-6">ID de paciente no válido</p>
           <button 
             onClick={() => navigate('/pacientes')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm transition-all"
           >
             Volver a Pacientes
           </button>
@@ -29,7 +35,6 @@ const FichaPage: React.FC = () => {
       idPaciente={pacienteId} 
       onClose={() => navigate('/pacientes')}
       onSave={(ficha) => {
-        // Navegar a pagos después de guardar
         navigate(`/pacientes/${pacienteId}/ficha/${ficha.id_ficha}/pagos`);
       }}
     />
