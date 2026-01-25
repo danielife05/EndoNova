@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import httpx
 
 app = FastAPI(title="API Gateway - Sistema Odontológico")
@@ -13,20 +14,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# URLs de tus microservicios (Puertos que ya configuraste)
+# URLs de tus microservicios (nombres de contenedores en Docker)
 SERVICES = {
     "auth": "http://auth-service:8000",
     "patients": "http://patient-service:8000",
     "clinical": "http://clinical-service:8000",
     "odontogram": "http://odontogram-service:8000"
-}
-
-# Para desarrollo local (cuando no se usa Docker)
-SERVICES_LOCAL = {
-    "auth": "http://localhost:8001",
-    "patients": "http://localhost:8002",
-    "clinical": "http://localhost:8003",
-    "odontogram": "http://localhost:8004"
 }
 
 
@@ -65,11 +58,19 @@ async def gateway(service: str, path: str, request: Request):
                 headers=headers
             )
             
-            # Intentar devolver JSON, si no, devolver texto
+            # ========================================================
+            # CORRECCIÓN: Propagar el código de estado HTTP del backend
+            # ========================================================
             try:
-                return response.json()
+                response_data = response.json()
             except Exception:
-                return {"status": "ok", "data": response.text}
+                response_data = {"message": response.text}
+            
+            # Devolver respuesta con el MISMO código de estado que el microservicio
+            return JSONResponse(
+                content=response_data,
+                status_code=response.status_code
+            )
                 
     except httpx.ConnectError:
         raise HTTPException(

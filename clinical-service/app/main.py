@@ -2,6 +2,7 @@ from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sql_func
 from . import models, schemas, database
 
 models.Base.metadata.create_all(bind=database.engine)
@@ -26,6 +27,104 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# ============ ESTADÍSTICAS PARA DASHBOARD ============
+
+@app.get("/stats")
+def get_dashboard_stats(db: Session = Depends(database.get_db)):
+    """Obtener estadísticas generales para el dashboard"""
+    
+    # Total de fichas
+    total_fichas = db.query(models.FichaEndodontica).count()
+    
+    # Fichas por estado
+    fichas_abiertas = db.query(models.FichaEndodontica).filter(
+        models.FichaEndodontica.estado == "ABIERTA"
+    ).count()
+    fichas_cerradas = db.query(models.FichaEndodontica).filter(
+        models.FichaEndodontica.estado == "CERRADA"
+    ).count()
+    
+    # Total presupuestado (suma de todos los presupuestos)
+    total_presupuestado = db.query(
+        sql_func.coalesce(sql_func.sum(models.Presupuesto.total_estimado), 0)
+    ).scalar() or 0
+    
+    # Total cobrado (suma de todos los pagos)
+    total_cobrado = db.query(
+        sql_func.coalesce(sql_func.sum(models.Pago.valor), 0)
+    ).scalar() or 0
+    
+    # Saldo pendiente
+    saldo_pendiente = float(total_presupuestado) - float(total_cobrado)
+    
+    # Últimos 5 pagos con info del presupuesto
+    ultimos_pagos = db.query(models.Pago).order_by(
+        models.Pago.fecha.desc()
+    ).limit(5).all()
+    
+    pagos_recientes = []
+    for pago in ultimos_pagos:
+        presupuesto = db.query(models.Presupuesto).filter(
+            models.Presupuesto.id_presupuesto == pago.id_presupuesto
+        ).first()
+        
+        id_paciente = None
+        pieza_dental = None
+        if presupuesto:
+            ficha = db.query(models.FichaEndodontica).filter(
+                models.FichaEndodontica.id_ficha == presupuesto.id_ficha
+            ).first()
+            if ficha:
+                id_paciente = ficha.id_paciente
+                pieza_dental = ficha.pieza_dental
+        
+        pagos_recientes.append({
+            "id_pago": pago.id_pago,
+            "valor": pago.valor,
+            "metodo": pago.metodo,
+            "fecha": pago.fecha.isoformat() if pago.fecha else None,
+            "id_paciente": id_paciente,
+            "pieza_dental": pieza_dental
+        })
+    
+    # Últimas 5 fichas
+    ultimas_fichas = db.query(models.FichaEndodontica).order_by(
+        models.FichaEndodontica.created_at.desc()
+    ).limit(5).all()
+    
+    fichas_recientes = [{
+        "id_ficha": f.id_ficha,
+        "id_paciente": f.id_paciente,
+        "pieza_dental": f.pieza_dental,
+        "estado": f.estado,
+        "fecha": f.created_at.isoformat() if f.created_at else None
+    } for f in ultimas_fichas]
+    
+    # Pagos por método (para gráfico)
+    pagos_por_metodo = db.query(
+        models.Pago.metodo,
+        sql_func.sum(models.Pago.valor).label('total')
+    ).group_by(models.Pago.metodo).all()
+    
+    metodos_pago = {m: 0 for m in ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "OTRO"]}
+    for metodo, total in pagos_por_metodo:
+        if metodo in metodos_pago:
+            metodos_pago[metodo] = float(total or 0)
+    
+    return {
+        "total_fichas": total_fichas,
+        "fichas_abiertas": fichas_abiertas,
+        "fichas_cerradas": fichas_cerradas,
+        "total_presupuestado": float(total_presupuestado),
+        "total_cobrado": float(total_cobrado),
+        "saldo_pendiente": float(saldo_pendiente),
+        "porcentaje_cobrado": round((float(total_cobrado) / float(total_presupuestado) * 100), 1) if total_presupuestado > 0 else 0,
+        "pagos_recientes": pagos_recientes,
+        "fichas_recientes": fichas_recientes,
+        "pagos_por_metodo": metodos_pago
+    }
 
 
 # ============ FICHAS ENDODONTICAS ============
