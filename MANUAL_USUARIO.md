@@ -2,9 +2,7 @@
 
 ## EndoNova - Sistema de Gestión Odontológica
 
-**Versión:** 1.0  
-**Fecha:** Enero 2026  
-**Documento:** Manual de Usuario Final
+**Fecha:** Enero 2026
 
 ---
 
@@ -53,20 +51,20 @@ Este manual está dirigido a:
 
 ### 2.1 Requisitos de Hardware
 
-| Componente | Requisito Mínimo | Recomendado |
-|------------|------------------|-------------|
-| Procesador | Dual Core 2.0 GHz | Quad Core 2.5 GHz |
-| Memoria RAM | 4 GB | 8 GB |
-| Almacenamiento | 500 MB libres | 1 GB libres |
-| Pantalla | 1366 x 768 px | 1920 x 1080 px |
+| Componente     | Requisito Mínimo | Recomendado       |
+| -------------- | ----------------- | ----------------- |
+| Procesador     | Dual Core 2.0 GHz | Quad Core 2.5 GHz |
+| Memoria RAM    | 4 GB              | 8 GB              |
+| Almacenamiento | 500 MB libres     | 1 GB libres       |
+| Pantalla       | 1366 x 768 px     | 1920 x 1080 px    |
 
 ### 2.2 Requisitos de Software
 
-| Software | Versiones Compatibles |
-|----------|----------------------|
-| Sistema Operativo | Windows 10/11, macOS 10.15+, Linux |
-| Navegador Web | Google Chrome 90+, Mozilla Firefox 90+, Microsoft Edge 90+, Safari 14+ |
-| Conexión | Internet estable |
+| Software          | Versiones Compatibles                                                  |
+| ----------------- | ---------------------------------------------------------------------- |
+| Sistema Operativo | Windows 10/11, macOS 10.15+, Linux                                     |
+| Navegador Web     | Google Chrome 90+, Mozilla Firefox 90+, Microsoft Edge 90+, Safari 14+ |
+| Conexión         | Internet estable                                                       |
 
 ### 2.3 Navegadores Recomendados
 
@@ -140,15 +138,18 @@ El Dashboard es la pantalla principal del sistema. Proporciona un resumen visual
 El panel principal muestra:
 
 **Tarjetas de Estadísticas:**
+
 - Total de pacientes registrados
 - Número de fichas endodónticas
 - Total cobrado (suma de todos los pagos)
 - Saldo pendiente (presupuesto menos pagos)
 
 **Gráfico de Progreso:**
+
 - Indicador visual del porcentaje de cobro respecto al presupuesto total
 
 **Tablas de Información Reciente:**
+
 - Últimas fichas endodónticas creadas
 - Últimos pagos registrados
 
@@ -156,13 +157,13 @@ El panel principal muestra:
 
 Desde el Dashboard puede acceder a todos los módulos del sistema mediante el menú de navegación:
 
-| Opción | Descripción |
-|--------|-------------|
-| Dashboard | Pantalla principal con estadísticas |
-| Pacientes | Gestión de pacientes |
-| Fichas | Fichas endodónticas (requiere seleccionar paciente) |
-| Odontograma | Estado dental (requiere seleccionar paciente) |
-| Pagos | Presupuestos y cobros (requiere seleccionar paciente) |
+| Opción     | Descripción                                          |
+| ----------- | ----------------------------------------------------- |
+| Dashboard   | Pantalla principal con estadísticas                  |
+| Pacientes   | Gestión de pacientes                                 |
+| Fichas      | Fichas endodónticas (requiere seleccionar paciente)  |
+| Odontograma | Estado dental (requiere seleccionar paciente)         |
+| Pagos       | Presupuestos y cobros (requiere seleccionar paciente) |
 
 ---
 
@@ -184,20 +185,21 @@ Para agregar un paciente al sistema:
 1. Haga clic en el botón "Nuevo Paciente"
 2. Complete el formulario con los datos requeridos:
 
-| Campo | Descripción | Obligatorio |
-|-------|-------------|-------------|
-| Cédula | Número de identificación único | Sí |
-| Nombres | Nombres del paciente | Sí |
-| Apellidos | Apellidos del paciente | Sí |
-| Fecha de Nacimiento | Formato: DD/MM/AAAA | Sí |
-| Teléfono | Número de contacto | No |
-| Email | Correo electrónico | No |
-| Dirección | Dirección domiciliaria | No |
+| Campo               | Descripción                      | Obligatorio |
+| ------------------- | --------------------------------- | ----------- |
+| Cédula             | Número de identificación único | Sí         |
+| Nombres             | Nombres del paciente              | Sí         |
+| Apellidos           | Apellidos del paciente            | Sí         |
+| Fecha de Nacimiento | Formato: DD/MM/AAAA               | Sí         |
+| Teléfono           | Número de contacto               | No          |
+| Email               | Correo electrónico               | No          |
+| Dirección          | Dirección domiciliaria           | No          |
 
 3. Haga clic en "Guardar"
 4. El sistema validará los datos y creará el registro
 
 **Validaciones:**
+
 - La cédula debe ser única. Si ya existe un paciente con esa cédula, el sistema mostrará un error.
 - Los campos obligatorios deben estar completos.
 
@@ -264,38 +266,38 @@ Para registrar una nueva ficha endodóntica:
 1. Haga clic en "Nueva Ficha"
 2. Complete el formulario:
 
-| Campo | Descripción |
-|-------|-------------|
-| Pieza Dental | Seleccione el número de diente (1-32 permanentes, 51-85 deciduos) |
-| Motivo de Consulta | Descripción del motivo por el cual asiste el paciente |
-| Diagnóstico Pulpar | Seleccione de la lista de opciones |
-| Diagnóstico Periapical | Seleccione de la lista de opciones |
-| Observaciones | Notas adicionales del tratamiento |
+| Campo                   | Descripción                                                       |
+| ----------------------- | ------------------------------------------------------------------ |
+| Pieza Dental            | Seleccione el número de diente (1-32 permanentes, 51-85 deciduos) |
+| Motivo de Consulta      | Descripción del motivo por el cual asiste el paciente             |
+| Diagnóstico Pulpar     | Seleccione de la lista de opciones                                 |
+| Diagnóstico Periapical | Seleccione de la lista de opciones                                 |
+| Observaciones           | Notas adicionales del tratamiento                                  |
 
 3. Haga clic en "Guardar"
 
 ### 7.4 Diagnósticos Pulpares Disponibles
 
-| Diagnóstico | Descripción |
-|-------------|-------------|
-| Normal | Pulpa vital sin patología |
-| Pulpitis Reversible | Inflamación leve, recuperable |
-| Pulpitis Irreversible Sintomática | Inflamación severa con dolor |
-| Pulpitis Irreversible Asintomática | Inflamación severa sin dolor |
-| Necrosis Pulpar | Muerte del tejido pulpar |
-| Previamente Tratado | Diente con tratamiento de conducto previo |
-| Previamente Iniciado | Tratamiento de conducto comenzado |
+| Diagnóstico                        | Descripción                              |
+| ----------------------------------- | ----------------------------------------- |
+| Normal                              | Pulpa vital sin patología                |
+| Pulpitis Reversible                 | Inflamación leve, recuperable            |
+| Pulpitis Irreversible Sintomática  | Inflamación severa con dolor             |
+| Pulpitis Irreversible Asintomática | Inflamación severa sin dolor             |
+| Necrosis Pulpar                     | Muerte del tejido pulpar                  |
+| Previamente Tratado                 | Diente con tratamiento de conducto previo |
+| Previamente Iniciado                | Tratamiento de conducto comenzado         |
 
 ### 7.5 Diagnósticos Periapicales Disponibles
 
-| Diagnóstico | Descripción |
-|-------------|-------------|
-| Normal | Tejido periapical sano |
-| Periodontitis Apical Sintomática | Inflamación con síntomas |
-| Periodontitis Apical Asintomática | Inflamación sin síntomas |
-| Absceso Apical Agudo | Infección aguda con pus |
-| Absceso Apical Crónico | Infección crónica con fístula |
-| Osteítis Condensante | Reacción ósea a infección crónica |
+| Diagnóstico                       | Descripción                          |
+| ---------------------------------- | ------------------------------------- |
+| Normal                             | Tejido periapical sano                |
+| Periodontitis Apical Sintomática  | Inflamación con síntomas            |
+| Periodontitis Apical Asintomática | Inflamación sin síntomas            |
+| Absceso Apical Agudo               | Infección aguda con pus              |
+| Absceso Apical Crónico            | Infección crónica con fístula      |
+| Osteítis Condensante              | Reacción ósea a infección crónica |
 
 ### 7.6 Editar Ficha
 
@@ -331,12 +333,14 @@ Para acceder al odontograma de un paciente:
 El odontograma muestra una representación gráfica de todos los dientes:
 
 **Dentición Permanente (adulto):**
+
 - Cuadrante superior derecho: dientes 11-18
 - Cuadrante superior izquierdo: dientes 21-28
 - Cuadrante inferior izquierdo: dientes 31-38
 - Cuadrante inferior derecho: dientes 41-48
 
 **Dentición Decidua (temporal/infantil):**
+
 - Cuadrante superior derecho: dientes 51-55
 - Cuadrante superior izquierdo: dientes 61-65
 - Cuadrante inferior izquierdo: dientes 71-75
@@ -346,14 +350,14 @@ El odontograma muestra una representación gráfica de todos los dientes:
 
 Cada diente puede tener uno de los siguientes estados, identificados por colores:
 
-| Estado | Color | Descripción |
-|--------|-------|-------------|
-| Sano | Verde | Diente sin patología |
-| Caries | Rojo | Presencia de caries dental |
-| Restauración | Azul | Diente con restauración/obturación |
-| Endodoncia | Violeta | Tratamiento de conducto realizado |
-| Ausente | Gris | Diente extraído o ausente |
-| Otro | Amarillo | Otra condición |
+| Estado        | Color    | Descripción                         |
+| ------------- | -------- | ------------------------------------ |
+| Sano          | Verde    | Diente sin patología                |
+| Caries        | Rojo     | Presencia de caries dental           |
+| Restauración | Azul     | Diente con restauración/obturación |
+| Endodoncia    | Violeta  | Tratamiento de conducto realizado    |
+| Ausente       | Gris     | Diente extraído o ausente           |
+| Otro          | Amarillo | Otra condición                      |
 
 ### 8.4 Modificar Estado de un Diente
 
@@ -407,12 +411,12 @@ Para gestionar presupuestos y pagos de un paciente:
 
 En la parte superior se muestra un resumen:
 
-| Indicador | Descripción |
-|-----------|-------------|
+| Indicador         | Descripción                                 |
+| ----------------- | -------------------------------------------- |
 | Total Presupuesto | Suma de todas las actividades presupuestadas |
-| Total Pagado | Suma de todos los pagos registrados |
-| Saldo Pendiente | Diferencia entre presupuesto y pagos |
-| Barra de Progreso | Porcentaje visual de avance de pago |
+| Total Pagado      | Suma de todos los pagos registrados          |
+| Saldo Pendiente   | Diferencia entre presupuesto y pagos         |
+| Barra de Progreso | Porcentaje visual de avance de pago          |
 
 ### 9.3 Gestión del Presupuesto
 
@@ -421,15 +425,16 @@ En la parte superior se muestra un resumen:
 1. En la sección "Presupuesto", haga clic en "Agregar"
 2. Complete el formulario:
 
-| Campo | Descripción |
-|-------|-------------|
-| Actividad | Seleccione el tipo de tratamiento |
-| Precio Unitario | Costo por unidad |
-| Cantidad | Número de unidades |
+| Campo           | Descripción                      |
+| --------------- | --------------------------------- |
+| Actividad       | Seleccione el tipo de tratamiento |
+| Precio Unitario | Costo por unidad                  |
+| Cantidad        | Número de unidades               |
 
 3. Haga clic en "Agregar"
 
 **Actividades Disponibles:**
+
 - Consulta
 - Radiografía
 - Endodoncia Unirradicular
@@ -452,22 +457,22 @@ En la parte superior se muestra un resumen:
 1. En la sección "Pagos", haga clic en "Nuevo Pago"
 2. Complete el formulario:
 
-| Campo | Descripción |
-|-------|-------------|
-| Monto | Cantidad a registrar |
+| Campo           | Descripción                            |
+| --------------- | --------------------------------------- |
+| Monto           | Cantidad a registrar                    |
 | Método de Pago | Efectivo, Transferencia, Tarjeta u Otro |
-| Observaciones | Notas adicionales (opcional) |
+| Observaciones   | Notas adicionales (opcional)            |
 
 3. Haga clic en "Registrar Pago"
 
 **Métodos de Pago Disponibles:**
 
-| Método | Descripción |
-|--------|-------------|
-| Efectivo | Pago en efectivo |
-| Transferencia | Transferencia bancaria |
-| Tarjeta | Tarjeta de crédito o débito |
-| Otro | Otros medios de pago |
+| Método       | Descripción                  |
+| ------------- | ----------------------------- |
+| Efectivo      | Pago en efectivo              |
+| Transferencia | Transferencia bancaria        |
+| Tarjeta       | Tarjeta de crédito o débito |
+| Otro          | Otros medios de pago          |
 
 ### 9.5 Historial de Pagos
 
@@ -562,11 +567,10 @@ Al reportar un problema, incluya:
 
 ## Control de Documento
 
-| Versión | Fecha | Descripción |
-|---------|-------|-------------|
-| 1.0 | Enero 2026 | Versión inicial del manual |
+| Versión | Fecha      | Descripción                |
+| -------- | ---------- | --------------------------- |
+| 1.0      | Enero 2026 | Versión inicial del manual |
 
 ---
 
-**EndoNova** - Sistema de Gestión Odontológica  
-Manual de Usuario v1.0
+**EndoNova** - Sistema de Gestión Odontológica
