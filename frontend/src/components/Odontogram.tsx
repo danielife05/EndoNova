@@ -52,7 +52,8 @@ const ToothButton: React.FC<{
   onClick: (numero: number) => void;
   isDeciduo?: boolean;
   index: number;
-}> = ({ numero, estado, onClick, isDeciduo, index }) => {
+  tieneHistorial?: boolean;
+}> = ({ numero, estado, onClick, isDeciduo, index, tieneHistorial }) => {
   const estadoValido = estado && ESTADO_CONFIG[estado] ? estado : 'SANO';
   const config = ESTADO_CONFIG[estadoValido];
   
@@ -84,6 +85,16 @@ const ToothButton: React.FC<{
         className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white shadow-sm"
         style={{ backgroundColor: config.color }}
       />
+      
+      {/* Indicador de historial previo */}
+      {tieneHistorial && estadoValido !== 'SANO' && (
+        <div 
+          className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-amber-400 border-2 border-white shadow-sm flex items-center justify-center"
+          title="Este diente tiene historial de cambios"
+        >
+          <span className="text-[8px] font-bold text-amber-900">H</span>
+        </div>
+      )}
     </button>
   );
 };
@@ -96,7 +107,8 @@ const DentalRow: React.FC<{
   label: string;
   isDeciduo?: boolean;
   startIndex: number;
-}> = ({ dientes, estados, onToothClick, label, isDeciduo, startIndex }) => (
+  dentesConHistorial?: Set<number>;
+}> = ({ dientes, estados, onToothClick, label, isDeciduo, startIndex, dentesConHistorial }) => (
   <div className="flex flex-col items-center">
     <span className="text-xs font-semibold text-slate-500 mb-3 px-3 py-1 bg-white/50 rounded-full">{label}</span>
     <div className="flex gap-1.5">
@@ -108,6 +120,7 @@ const DentalRow: React.FC<{
           onClick={onToothClick}
           isDeciduo={isDeciduo}
           index={startIndex + idx}
+          tieneHistorial={dentesConHistorial?.has(num)}
         />
       ))}
     </div>
@@ -118,24 +131,69 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [estados, setEstados] = useState<Record<number, EstadoDiente>>({});
+  const [estadosBase, setEstadosBase] = useState<Record<number, EstadoDiente>>({});
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; pieza: number } | null>(null);
   const [historial, setHistorial] = useState<OdontogramaResponse[]>([]);
   const [showHistorial, setShowHistorial] = useState(false);
   const [odontogramaActual, setOdontogramaActual] = useState<number | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [dentesConHistorial, setDentesConHistorial] = useState<Set<number>>(new Set());
+
+  // Función para consolidar todos los estados del historial
+  // Toma el estado más reciente de cada diente de todos los odontogramas
+  const consolidarEstadosHistorial = useCallback((historialData: OdontogramaResponse[]): Record<number, EstadoDiente> => {
+    const estadosConsolidados: Record<number, EstadoDiente> = {};
+    
+    // El historial viene ordenado del más reciente al más antiguo
+    // Iteramos desde el más antiguo al más reciente para que los recientes sobrescriban
+    const historialOrdenado = [...historialData].reverse();
+    
+    historialOrdenado.forEach(odontograma => {
+      odontograma.dientes.forEach(d => {
+        estadosConsolidados[d.pieza_dental] = d.estado;
+      });
+    });
+    
+    return estadosConsolidados;
+  }, []);
+
+  // Función para identificar dientes que aparecen en múltiples registros del historial
+  const identificarDentesConHistorial = useCallback((historialData: OdontogramaResponse[]): Set<number> => {
+    const contadorPorDiente: Record<number, number> = {};
+    
+    historialData.forEach(odontograma => {
+      odontograma.dientes.forEach(d => {
+        contadorPorDiente[d.pieza_dental] = (contadorPorDiente[d.pieza_dental] || 0) + 1;
+      });
+    });
+    
+    // Dientes que aparecen en más de un registro
+    return new Set(
+      Object.entries(contadorPorDiente)
+        .filter(([, count]) => count > 1)
+        .map(([pieza]) => parseInt(pieza))
+    );
+  }, []);
 
   const fetchHistorial = useCallback(async () => {
     try {
       const response = await api.get<OdontogramaResponse[]>(`/odontogram/odontogramas/paciente/${idPaciente}`);
       setHistorial(response.data || []);
       if (response.data && response.data.length > 0) {
-        cargarOdontograma(response.data[0]);
+        // Consolidar todos los estados del historial
+        const estadosConsolidados = consolidarEstadosHistorial(response.data);
+        setEstadosBase(estadosConsolidados);
+        setEstados(estadosConsolidados);
+        setOdontogramaActual(null); // No estamos viendo un odontograma específico, sino el consolidado
+        
+        // Identificar dientes con múltiples registros
+        setDentesConHistorial(identificarDentesConHistorial(response.data));
       }
     } catch (error) {
       console.error('Error cargando historial:', error);
     }
-  }, [idPaciente]);
+  }, [idPaciente, consolidarEstadosHistorial, identificarDentesConHistorial]);
 
   useEffect(() => { fetchHistorial(); }, [fetchHistorial]);
 
@@ -191,7 +249,8 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
   };
 
   const handleNuevo = () => {
-    setEstados({});
+    // Cargar el estado consolidado del historial en lugar de limpiar todo
+    setEstados({ ...estadosBase });
     setOdontogramaActual(null);
     setHasChanges(false);
     setShowHistorial(false);
@@ -303,28 +362,63 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
               </div>
             ) : (
               <div className="grid gap-3">
-                {historial.map((h, idx) => (
-                  <button
-                    key={h.id_odontograma}
-                    onClick={() => cargarOdontograma(h)}
-                    className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-2xl hover:border-cyan-200 hover:bg-cyan-50/50 transition-all text-left group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-xl flex items-center justify-center group-hover:from-cyan-200 group-hover:to-blue-200 transition-colors">
-                        <span className="text-cyan-600 font-bold">#{idx + 1}</span>
+                {historial.map((h, idx) => {
+                  const dientesAlterados = h.dientes.filter(d => d.estado !== 'SANO');
+                  // Agrupar dientes por estado
+                  const dientesPorEstado = dientesAlterados.reduce((acc, d) => {
+                    if (!acc[d.estado]) acc[d.estado] = [];
+                    acc[d.estado].push(d.pieza_dental);
+                    return acc;
+                  }, {} as Record<EstadoDiente, number[]>);
+                  
+                  return (
+                    <button
+                      key={h.id_odontograma}
+                      onClick={() => cargarOdontograma(h)}
+                      className="flex flex-col p-4 bg-white border-2 border-slate-100 rounded-2xl hover:border-cyan-200 hover:bg-cyan-50/50 transition-all text-left group"
+                    >
+                      <div className="flex justify-between items-center w-full mb-2">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-xl flex items-center justify-center group-hover:from-cyan-200 group-hover:to-blue-200 transition-colors">
+                            <span className="text-cyan-600 font-bold text-sm">#{idx + 1}</span>
+                          </div>
+                          <span className="font-semibold text-slate-700 group-hover:text-cyan-600 transition-colors">
+                            {new Date(h.fecha).toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <svg className="w-5 h-5 text-slate-400 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
-                      <div>
-                        <span className="font-semibold text-slate-700 group-hover:text-cyan-600 transition-colors">
-                          {new Date(h.fecha).toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' })}
-                        </span>
-                        <p className="text-slate-500 text-sm">{h.dientes.filter(d => d.estado !== 'SANO').length} piezas con alteración</p>
+                      
+                      {/* Detalle de piezas por estado */}
+                      <div className="flex flex-wrap gap-2 ml-14">
+                        {Object.entries(dientesPorEstado).map(([estado, piezas]) => (
+                          <div 
+                            key={estado}
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
+                            style={{ 
+                              backgroundColor: ESTADO_CONFIG[estado as EstadoDiente].bg,
+                              borderColor: ESTADO_CONFIG[estado as EstadoDiente].color,
+                              borderWidth: 1
+                            }}
+                          >
+                            <div 
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: ESTADO_CONFIG[estado as EstadoDiente].color }}
+                            />
+                            <span style={{ color: ESTADO_CONFIG[estado as EstadoDiente].color }} className="font-medium">
+                              {ESTADO_CONFIG[estado as EstadoDiente].label}: {piezas.sort((a, b) => a - b).join(', ')}
+                            </span>
+                          </div>
+                        ))}
+                        {dientesAlterados.length === 0 && (
+                          <span className="text-slate-400 text-xs">Sin alteraciones registradas</span>
+                        )}
                       </div>
-                    </div>
-                    <svg className="w-5 h-5 text-slate-400 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -342,9 +436,9 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
               </h3>
               
               <div className="flex justify-center gap-8 mb-4 flex-wrap">
-                <DentalRow dientes={DIENTES_SUPERIORES_DER} estados={estados} onToothClick={handleToothClick} label="Cuadrante 1" startIndex={0} />
+                <DentalRow dientes={DIENTES_SUPERIORES_DER} estados={estados} onToothClick={handleToothClick} label="Cuadrante 1" startIndex={0} dentesConHistorial={dentesConHistorial} />
                 <div className="w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent self-stretch hidden md:block" />
-                <DentalRow dientes={DIENTES_SUPERIORES_IZQ} estados={estados} onToothClick={handleToothClick} label="Cuadrante 2" startIndex={8} />
+                <DentalRow dientes={DIENTES_SUPERIORES_IZQ} estados={estados} onToothClick={handleToothClick} label="Cuadrante 2" startIndex={8} dentesConHistorial={dentesConHistorial} />
               </div>
 
               <div className="flex items-center justify-center my-6">
@@ -354,9 +448,9 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
               </div>
 
               <div className="flex justify-center gap-8 flex-wrap">
-                <DentalRow dientes={DIENTES_INFERIORES_DER} estados={estados} onToothClick={handleToothClick} label="Cuadrante 4" startIndex={16} />
+                <DentalRow dientes={DIENTES_INFERIORES_DER} estados={estados} onToothClick={handleToothClick} label="Cuadrante 4" startIndex={16} dentesConHistorial={dentesConHistorial} />
                 <div className="w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent self-stretch hidden md:block" />
-                <DentalRow dientes={DIENTES_INFERIORES_IZQ} estados={estados} onToothClick={handleToothClick} label="Cuadrante 3" startIndex={24} />
+                <DentalRow dientes={DIENTES_INFERIORES_IZQ} estados={estados} onToothClick={handleToothClick} label="Cuadrante 3" startIndex={24} dentesConHistorial={dentesConHistorial} />
               </div>
             </div>
 
@@ -372,17 +466,17 @@ const Odontogram: React.FC<OdontogramProps> = ({ idPaciente, onClose }) => {
               </h3>
               
               <div className="flex justify-center gap-8 mb-4 flex-wrap">
-                <DentalRow dientes={DECIDUOS_SUPERIORES_DER} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 5" startIndex={32} />
+                <DentalRow dientes={DECIDUOS_SUPERIORES_DER} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 5" startIndex={32} dentesConHistorial={dentesConHistorial} />
                 <div className="w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent self-stretch hidden md:block" />
-                <DentalRow dientes={DECIDUOS_SUPERIORES_IZQ} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 6" startIndex={37} />
+                <DentalRow dientes={DECIDUOS_SUPERIORES_IZQ} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 6" startIndex={37} dentesConHistorial={dentesConHistorial} />
               </div>
 
               <div className="h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent my-4" />
 
               <div className="flex justify-center gap-8 flex-wrap">
-                <DentalRow dientes={DECIDUOS_INFERIORES_DER} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 8" startIndex={42} />
+                <DentalRow dientes={DECIDUOS_INFERIORES_DER} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 8" startIndex={42} dentesConHistorial={dentesConHistorial} />
                 <div className="w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent self-stretch hidden md:block" />
-                <DentalRow dientes={DECIDUOS_INFERIORES_IZQ} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 7" startIndex={47} />
+                <DentalRow dientes={DECIDUOS_INFERIORES_IZQ} estados={estados} onToothClick={handleToothClick} isDeciduo label="Cuadrante 7" startIndex={47} dentesConHistorial={dentesConHistorial} />
               </div>
             </div>
 
